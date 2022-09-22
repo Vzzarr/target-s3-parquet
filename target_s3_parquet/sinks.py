@@ -66,7 +66,7 @@ class S3ParquetSink(BatchSink):
         self.logger.info("The schema is:")
         self.logger.info(self.schema)
         tap_schema = generate_tap_schema(
-            self.schema["properties"], only_string=self.config.get("stringify_schema")
+            self.schema, only_string=self.config.get("stringify_schema")
         )
 
         dtype = {**current_schema, **tap_schema}
