@@ -48,9 +48,8 @@ def generate_tap_schema(schema, level=0, only_string=False):
             continue
 
         if cleaned_type == "object":
-            print(attributes)
             field_definitions[name] = build_struct_type(
-                attributes["properties"], new_level
+                attributes, new_level
             )
         elif cleaned_type == "array":
             array_type = get_valid_types(attributes["items"]["type"])
