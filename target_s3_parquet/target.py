@@ -18,13 +18,11 @@ class TargetS3Parquet(Target):
             required=True,
         ),
         th.Property("aws_access_key_id", th.StringType, required=True),
-        th.Property(
-            "aws_secret_access_key",
-            th.StringType,
-            required=True,
-        ),
+        th.Property("aws_secret_access_key", th.StringType, required=True),
         th.Property("athena_database", th.StringType, required=True),
         th.Property("add_record_metadata", th.BooleanType, default=False),
         th.Property("stringify_schema", th.BooleanType, default=False),
+        # make sure the partition column is a timestamp / date type
+        th.Property("partition_column", th.StringType, default=False),
     ).to_dict()
     default_sink_class = S3ParquetSink

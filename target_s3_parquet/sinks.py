@@ -61,6 +61,9 @@ class S3ParquetSink(BatchSink):
         df = DataFrame(context["records"])
 
         df["_sdc_started_at"] = STARTED_AT.timestamp()
+        partition_column = self.config.get('partition_column')
+        if partition_column:
+            df["date"] = df[partition_column].dt.date
 
         #current_schema = generate_current_target_schema(self._get_glue_schema())
         self.logger.info("The schema is:")
@@ -91,7 +94,7 @@ class S3ParquetSink(BatchSink):
             database=self.config.get("athena_database"),
             table=self.stream_name,
             mode="append",
-            partition_cols=["_sdc_started_at"],
+            partition_cols=["date" if partition_column else "_sdc_started_at"],
             schema_evolution=True,
             #dtype=dtype,
         )
