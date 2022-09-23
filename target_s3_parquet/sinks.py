@@ -35,7 +35,7 @@ class S3ParquetSink(BatchSink):
     ) -> None:
         super().__init__(target, stream_name, schema, key_properties)
 
-        #self._glue_schema = self._get_glue_schema()
+        self._glue_schema = self._get_glue_schema()
 
     def _get_glue_schema(self):
 
@@ -62,17 +62,17 @@ class S3ParquetSink(BatchSink):
 
         df["_sdc_started_at"] = STARTED_AT.timestamp()
         partition_column = self.config.get('partition_column')
-        if partition_column:
-            df["date"] = df[partition_column].dt.date
+        #if partition_column:
+        #    df["date"] = df[partition_column].dt.date
 
-        #current_schema = generate_current_target_schema(self._get_glue_schema())
+        current_schema = generate_current_target_schema(self._get_glue_schema())
         self.logger.info("The schema is:")
         self.logger.info(self.schema)
-        #tap_schema = generate_tap_schema(
-        #    self.schema["properties"], only_string=self.config.get("stringify_schema")
-        #)
+        tap_schema = generate_tap_schema(
+            self.schema["properties"], only_string=self.config.get("stringify_schema")
+        )
 
-        #dtype = {**current_schema, **tap_schema}
+        dtype = {**current_schema, **tap_schema}
 
         if self.config.get("stringify_schema"):
             attributes_names = get_specific_type_attributes(
@@ -81,7 +81,7 @@ class S3ParquetSink(BatchSink):
             df_transformed = apply_json_dump_to_df(df, attributes_names)
             df = stringify_df(df_transformed)
 
-        #self.logger.debug(f"DType Definition: {dtype}")
+        self.logger.info(f"DType Definition: {dtype}")
 
         full_path = f"{self.config.get('s3_path')}/{self.config.get('athena_database')}/{self.stream_name}"
 
@@ -91,12 +91,12 @@ class S3ParquetSink(BatchSink):
             compression="snappy",
             dataset=True,
             path=full_path,
-            #database=self.config.get("athena_database"),
-            #table=self.stream_name,
-            #mode="append",
-            #partition_cols=["date" if partition_column else "_sdc_started_at"],
+            database=self.config.get("athena_database"),
+            table=self.stream_name,
+            mode="append",
+            partition_cols=["_sdc_started_at"],
             schema_evolution=True,
-            #dtype=dtype,
+            dtype=dtype,
         )
 
         self.logger.info(f"Uploaded {len(context['records'])}")
