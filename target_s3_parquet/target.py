@@ -22,6 +22,7 @@ class TargetS3Parquet(Target):
         th.Property("athena_database", th.StringType, required=True),
         th.Property("add_record_metadata", th.BooleanType, default=False),
         th.Property("stringify_schema", th.BooleanType, default=False),
+        th.Property("properties", th.Property, default=False),
         # make sure the partition column is a timestamp / date type
         th.Property("partition_column", th.StringType, default=False),
     ).to_dict()
