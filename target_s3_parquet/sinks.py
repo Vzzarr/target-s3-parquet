@@ -64,7 +64,7 @@ class S3ParquetSink(BatchSink):
         partition_column = self.config.get('partition_column')
         #if partition_column:
         #    df["date"] = df[partition_column].dt.date
-        schema = json.loads(self.config.get('properties'))
+        schema = json.loads(self.config.get('catalog'))
 
         current_schema = generate_current_target_schema(self._get_glue_schema())
         self.logger.info("The self.schema is:")
