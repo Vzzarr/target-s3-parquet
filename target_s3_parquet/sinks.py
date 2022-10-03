@@ -67,6 +67,8 @@ class S3ParquetSink(BatchSink):
         schema = json.loads(self.config.get('properties'))
 
         current_schema = generate_current_target_schema(self._get_glue_schema())
+        self.logger.info("The self.schema is:")
+        self.logger.info(self.schema)
         self.logger.info("The schema is:")
         self.logger.info(schema)
         tap_schema = generate_tap_schema(
