@@ -83,8 +83,11 @@ class S3ParquetSink(BatchSink):
             )
             df_transformed = apply_json_dump_to_df(df, attributes_names)
             df = stringify_df(df_transformed)
+        dtype_cleaned = {}
+        for k, v in dtype.items():
+            dtype_cleaned[k] = v.replace(" ", "")
 
-        self.logger.info(f"DType Definition: {dtype}")
+        self.logger.info(f"DType Definition: {dtype_cleaned}")
 
         full_path = f"{self.config.get('s3_path')}/{self.config.get('athena_database')}/{self.stream_name}"
 
@@ -99,7 +102,7 @@ class S3ParquetSink(BatchSink):
             mode="append",
             partition_cols=["_sdc_started_at"],
             schema_evolution=True,
-            dtype=dtype,
+            dtype=dtype_cleaned,
         )
 
         self.logger.info(f"Uploaded {len(context['records'])}")
