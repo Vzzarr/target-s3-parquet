@@ -3,6 +3,7 @@
 
 from typing import Dict, List, Optional
 import awswrangler as wr
+import pandas as pd
 from pandas import DataFrame
 from singer_sdk import PluginBase
 from singer_sdk.sinks import BatchSink
@@ -49,7 +50,7 @@ class S3ParquetSink(BatchSink):
         else:
             return DataFrame()
 
-    max_size = 10000  # Max records to write in one batch
+    max_size = 100  # Max records to write in one batch
 
     def process_batch(self, context: dict) -> None:
         """Write out any prepped records and return once fully written."""
@@ -60,10 +61,14 @@ class S3ParquetSink(BatchSink):
 
         df = DataFrame(context["records"])
 
-        df["_sdc_started_at"] = STARTED_AT.timestamp()
         partition_column = self.config.get('partition_column')
-        #if partition_column:
-        #    df["date"] = df[partition_column].dt.date
+        part_cols = []
+        if partition_column:
+            df['date'] = pd.to_datetime(df[partition_column], format='%Y-%m-%d').dt.date
+            part_cols.append('date')
+        else:
+            df["_sdc_started_at"] = STARTED_AT.timestamp()
+            part_cols.append('_sdc_started_at')
         schema = json.loads(self.config.get('catalog'))
 
         current_schema = generate_current_target_schema(self._get_glue_schema())
@@ -78,9 +83,7 @@ class S3ParquetSink(BatchSink):
         dtype = {**current_schema, **tap_schema}
 
         if self.config.get("stringify_schema"):
-            attributes_names = get_specific_type_attributes(
-                self.schema["properties"], "object"
-            )
+            attributes_names = get_specific_type_attributes(self.schema["properties"], "object")
             df_transformed = apply_json_dump_to_df(df, attributes_names)
             df = stringify_df(df_transformed)
         dtype_cleaned = {}
@@ -97,10 +100,8 @@ class S3ParquetSink(BatchSink):
             compression="snappy",
             dataset=True,
             path=full_path,
-            #database=self.config.get("athena_database"),
-            #table=self.stream_name,
             mode="append",
-            partition_cols=["_sdc_started_at"],
+            partition_cols=part_cols,
             schema_evolution=True,
             dtype=dtype_cleaned,
         )

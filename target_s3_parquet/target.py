@@ -10,6 +10,7 @@ class TargetS3Parquet(Target):
     """Sample target for S3Parquet."""
 
     name = "target-s3-parquet"
+    part_col_desc = 'Make sure the partition column is a timestamp / date type'
     config_jsonschema = th.PropertiesList(
         th.Property(
             "s3_path",
@@ -23,7 +24,6 @@ class TargetS3Parquet(Target):
         th.Property("add_record_metadata", th.BooleanType, default=False),
         th.Property("stringify_schema", th.BooleanType, default=False),
         th.Property("catalog", th.StringType, default=False),
-        # make sure the partition column is a timestamp / date type
-        th.Property("partition_column", th.StringType, default=False),
+        th.Property("partition_column", th.StringType, default=None, description=part_col_desc),
     ).to_dict()
     default_sink_class = S3ParquetSink
