@@ -25,10 +25,7 @@ from datetime import datetime
 STARTED_AT = datetime.now()
 
 
-def stringify_schema(df, schema_properties):
-    """
-
-    """
+def stringify_schema(df: pd.DataFrame, schema_properties: dict) -> pd.DataFrame:
     attributes_names = get_specific_type_attributes(schema_properties, "object")
     df_transformed = apply_json_dump_to_df(df, attributes_names)
     return stringify_df(df_transformed)
@@ -96,7 +93,7 @@ class S3ParquetSink(BatchSink):
         # dtype = {**current_schema, **tap_schema}
 
         if self.config.get("stringify_schema"):
-            df = stringify_schema
+            df = stringify_schema(df, schema["properties"])
 
         full_path = f"{self.config.get('s3_path')}/{self.config.get('athena_database')}/{self.stream_name}"
         try:
@@ -112,8 +109,9 @@ class S3ParquetSink(BatchSink):
                 dtype=dtype_cleaned,
             )
         except pyarrow.lib.ArrowTypeError as e:
+            self.logger.error("Type Mismatch Exception raised:")
             self.logger.error(e)
-            df = stringify_schema
+            df = stringify_schema(df, schema["properties"])
             dtype = generate_tap_schema(schema["properties"], only_string=True)
             discarded_path = f"{self.config.get('s3_path')}/{self.config.get('athena_database')}/{self.stream_name}/discarded/"
             wr.s3.to_parquet(
