@@ -4,6 +4,7 @@
 from typing import Dict, List, Optional
 import awswrangler as wr
 import pandas as pd
+import pyarrow
 from pandas import DataFrame
 from singer_sdk import PluginBase
 from singer_sdk.sinks import BatchSink
@@ -22,6 +23,15 @@ from target_s3_parquet.sanitizer import (
 from datetime import datetime
 
 STARTED_AT = datetime.now()
+
+
+def stringify_schema(df, schema_properties):
+    """
+
+    """
+    attributes_names = get_specific_type_attributes(schema_properties, "object")
+    df_transformed = apply_json_dump_to_df(df, attributes_names)
+    return stringify_df(df_transformed)
 
 
 class S3ParquetSink(BatchSink):
@@ -71,40 +81,52 @@ class S3ParquetSink(BatchSink):
             part_cols.append('_sdc_started_at')
         schema = json.loads(self.config.get('catalog'))
 
-        current_schema = generate_current_target_schema(self._get_glue_schema())
+        # current_schema = generate_current_target_schema(self._get_glue_schema())
         self.logger.info("The self.schema is:")
         self.logger.info(self.schema)
         self.logger.info("The schema is:")
         self.logger.info(schema)
-        tap_schema = generate_tap_schema(
-            schema["properties"], only_string=self.config.get("stringify_schema")
-        )
-
-        dtype = {**current_schema, **tap_schema}
-
-        if self.config.get("stringify_schema"):
-            attributes_names = get_specific_type_attributes(self.schema["properties"], "object")
-            df_transformed = apply_json_dump_to_df(df, attributes_names)
-            df = stringify_df(df_transformed)
+        dtype = generate_tap_schema(schema["properties"], only_string=self.config.get("stringify_schema"))
         dtype_cleaned = {}
         for k, v in dtype.items():
             dtype_cleaned[k] = v.replace(" ", "")
 
         self.logger.info(f"DType Definition: {dtype_cleaned}")
 
-        full_path = f"{self.config.get('s3_path')}/{self.config.get('athena_database')}/{self.stream_name}"
+        # dtype = {**current_schema, **tap_schema}
 
-        wr.s3.to_parquet(
-            df=df,
-            index=False,
-            compression="snappy",
-            dataset=True,
-            path=full_path,
-            mode="append",
-            partition_cols=part_cols,
-            schema_evolution=True,
-            dtype=dtype_cleaned,
-        )
+        if self.config.get("stringify_schema"):
+            df = stringify_schema
+
+        full_path = f"{self.config.get('s3_path')}/{self.config.get('athena_database')}/{self.stream_name}"
+        try:
+            wr.s3.to_parquet(
+                df=df,
+                index=False,
+                compression="snappy",
+                dataset=True,
+                path=full_path,
+                mode="append",
+                partition_cols=part_cols,
+                schema_evolution=True,
+                dtype=dtype_cleaned,
+            )
+        except pyarrow.lib.ArrowTypeError as e:
+            self.logger.error(e)
+            df = stringify_schema
+            dtype = generate_tap_schema(schema["properties"], only_string=True)
+            discarded_path = f"{self.config.get('s3_path')}/{self.config.get('athena_database')}/{self.stream_name}/discarded/"
+            wr.s3.to_parquet(
+                df=df,
+                index=False,
+                compression="snappy",
+                dataset=True,
+                path=discarded_path,
+                mode="append",
+                partition_cols=part_cols,
+                schema_evolution=True,
+                dtype=dtype,
+            )
 
         self.logger.info(f"Uploaded {len(context['records'])}")
 
