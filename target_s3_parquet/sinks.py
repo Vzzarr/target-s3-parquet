@@ -86,19 +86,19 @@ class S3ParquetSink(BatchSink):
             self.logger.error(e)
             df = stringify_schema(df, schema["properties"])
             dtype = generate_tap_schema(schema["properties"], only_string=True)
-            discarded_path = f"{self.config.get('s3_path')}/{self.stream_name}/_discarded/"
+            full_path = f"{self.config.get('s3_path')}/{self.stream_name}/_discarded/"
             wr.s3.to_parquet(
                 df=df,
                 index=False,
                 compression="snappy",
                 dataset=True,
-                path=discarded_path,
+                path=full_path,
                 mode="append",
                 partition_cols=part_cols,
                 schema_evolution=True,
                 dtype=dtype,
             )
 
-        self.logger.info(f"Uploaded {len(context['records'])}")
+        self.logger.info(f"Uploaded {len(context['records'])} to {full_path}")
 
         context["records"] = []
