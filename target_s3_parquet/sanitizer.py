@@ -53,3 +53,9 @@ def apply_json_dump_to_df(
 
 def stringify_df(df: DataFrame) -> DataFrame:
     return df.fillna("NULL").astype(str).replace("NULL", np.nan)
+
+
+def stringify_schema(df: DataFrame, schema_properties: dict) -> DataFrame:
+    attributes_names = get_specific_type_attributes(schema_properties, "object")
+    df_transformed = apply_json_dump_to_df(df, attributes_names)
+    return stringify_df(df_transformed)

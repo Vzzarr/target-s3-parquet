@@ -10,25 +10,16 @@ from singer_sdk import PluginBase
 from singer_sdk.sinks import BatchSink
 import json
 from target_s3_parquet.data_type_generator import (
-    generate_tap_schema,
-    generate_current_target_schema,
+    generate_tap_schema
 )
 from target_s3_parquet.sanitizer import (
-    get_specific_type_attributes,
-    apply_json_dump_to_df,
-    stringify_df,
+    stringify_schema
 )
 
 
 from datetime import datetime
 
 STARTED_AT = datetime.now()
-
-
-def stringify_schema(df: pd.DataFrame, schema_properties: dict) -> pd.DataFrame:
-    attributes_names = get_specific_type_attributes(schema_properties, "object")
-    df_transformed = apply_json_dump_to_df(df, attributes_names)
-    return stringify_df(df_transformed)
 
 
 class S3ParquetSink(BatchSink):
@@ -42,20 +33,6 @@ class S3ParquetSink(BatchSink):
         key_properties: Optional[List[str]],
     ) -> None:
         super().__init__(target, stream_name, schema, key_properties)
-
-        self._glue_schema = self._get_glue_schema()
-
-    def _get_glue_schema(self):
-
-        catalog_params = {
-            "database": self.config.get("athena_database"),
-            "table": self.stream_name,
-        }
-
-        if wr.catalog.does_table_exist(**catalog_params):
-            return wr.catalog.table(**catalog_params)
-        else:
-            return DataFrame()
 
     max_size = 100  # Max records to write in one batch
 
@@ -78,7 +55,6 @@ class S3ParquetSink(BatchSink):
             part_cols.append('_sdc_started_at')
         schema = json.loads(self.config.get('catalog'))
 
-        # current_schema = generate_current_target_schema(self._get_glue_schema())
         self.logger.info("The self.schema is:")
         self.logger.info(self.schema)
         self.logger.info("The schema is:")
@@ -89,13 +65,10 @@ class S3ParquetSink(BatchSink):
             dtype_cleaned[k] = v.replace(" ", "")
 
         self.logger.info(f"DType Definition: {dtype_cleaned}")
-
-        # dtype = {**current_schema, **tap_schema}
-
         if self.config.get("stringify_schema"):
             df = stringify_schema(df, schema["properties"])
 
-        full_path = f"{self.config.get('s3_path')}/{self.config.get('athena_database')}/{self.stream_name}"
+        full_path = f"{self.config.get('s3_path')}/{self.stream_name}"
         try:
             wr.s3.to_parquet(
                 df=df,
@@ -113,7 +86,7 @@ class S3ParquetSink(BatchSink):
             self.logger.error(e)
             df = stringify_schema(df, schema["properties"])
             dtype = generate_tap_schema(schema["properties"], only_string=True)
-            discarded_path = f"{self.config.get('s3_path')}/{self.config.get('athena_database')}/{self.stream_name}/discarded/"
+            discarded_path = f"{self.config.get('s3_path')}/{self.stream_name}/_discarded/"
             wr.s3.to_parquet(
                 df=df,
                 index=False,

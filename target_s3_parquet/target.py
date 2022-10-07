@@ -20,7 +20,6 @@ class TargetS3Parquet(Target):
         ),
         th.Property("aws_access_key_id", th.StringType, required=True),
         th.Property("aws_secret_access_key", th.StringType, required=True),
-        th.Property("athena_database", th.StringType, required=True),
         th.Property("add_record_metadata", th.BooleanType, default=False),
         th.Property("stringify_schema", th.BooleanType, default=False),
         th.Property("catalog", th.StringType, default=False),
