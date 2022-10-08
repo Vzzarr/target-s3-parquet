@@ -36,7 +36,7 @@ def generate_tap_schema(schema, level=0, only_string=False):
     new_level = level + 1
 
     for name, attributes in schema.items():
-        print(f"Level: {level} \t Name: {name} \t Attributes: {attributes}")
+        #print(f"Level: {level} \t Name: {name} \t Attributes: {attributes}")
         attribute_type = attributes.get("type") or type_from_anyof(attributes)
 
         if attribute_type is None:
